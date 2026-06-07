@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Macro Nutrient Tracker</title>
+<meta name="theme-color" content="#e8b830">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Macro Tracker">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root {
+  --bg: #0f0f1a;
+  --card: #1a1a2e;
+  --card2: #16213e;
+  --accent: #e8b830;
+  --green: #27ae60;
+  --green-light: #a9dfbf;
+  --orange: #f39c12;
+  --red: #e74c3c;
+  --red-dark: #c0392b;
+  --text: #ecf0f1;
+  --text-dim: #95a5a6;
+  --border: #2c3e50;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding: 20px;
+}
+h1 { text-align:center; color:var(--accent); margin-bottom:20px; font-size:1.6em; }
+
+/* Tabs */
+.tabs {
+  display:flex; gap:4px; margin-bottom:20px; justify-content:center; flex-wrap:wrap;
+}
+.tab-btn {
+  padding:10px 24px; border:none; border-radius:8px 8px 0 0;
+  cursor:pointer; font-size:0.95em; font-weight:600;
+  transition:all .2s; color:#fff;
+}
+.tab-btn.work { background:#1e5631; }
+.tab-btn.work.active { background:var(--green); }
+.tab-btn.rest { background:#5a1a1a; }
+.tab-btn.rest.active { background:var(--red); }
+.tab-btn.test { background:#5a3e0a; }
+.tab-btn.test.active { background:var(--orange); }
+
+.tab-content { display:none; }
+.tab-content.active { display:block; }
+
+/* Config section */
+.config-grid {
+  display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap:12px; margin-bottom:20px; background:var(--card); padding:16px;
+  border-radius:12px; border:1px solid var(--border);
+}
+.config-item { text-align:center; }
+.config-item label { display:block; font-size:0.75em; color:var(--text-dim); margin-bottom:4px; text-transform:uppercase; letter-spacing:0.5px; }
+.config-item input {
+  width:80px; padding:8px; border-radius:6px; border:1px solid var(--border);
+  background:var(--card2); color:var(--accent); text-align:center;
+  font-size:1.1em; font-weight:bold;
+}
+.config-item .computed {
+  font-size:1.3em; font-weight:bold; color:var(--accent);
+  background:var(--card2); padding:8px; border-radius:6px;
+}
+
+/* Dashboard */
+.dashboard {
+  display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap:12px; margin-bottom:20px;
+}
+.dash-card {
+  background:var(--card); border-radius:12px; padding:16px; text-align:center;
+  border:2px solid var(--border); transition:all .3s;
+}
+.dash-card .macro-name { font-size:0.8em; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px; }
+.dash-card .macro-value { font-size:2em; font-weight:bold; margin:8px 0; }
+.dash-card .macro-target { font-size:0.85em; color:var(--text-dim); }
+.dash-card .macro-bar { height:8px; background:#2c3e50; border-radius:4px; margin-top:10px; overflow:hidden; }
+.dash-card .macro-bar-fill { height:100%; border-radius:4px; transition:width .4s, background .4s; }
+.dash-card .macro-gkg { font-size:0.75em; color:var(--text-dim); margin-top:4px; }
+
+.dash-card.status-green { border-color:var(--green); }
+.dash-card.status-green-light { border-color:var(--green-light); }
+.dash-card.status-orange { border-color:var(--orange); }
+.dash-card.status-red { border-color:var(--red); }
+.dash-card.status-red-dark { border-color:var(--red-dark); }
+
+/* Kcal card */
+.kcal-card {
+  background:var(--card); border-radius:12px; padding:16px; text-align:center;
+  border:2px solid var(--accent); margin-bottom:20px;
+}
+.kcal-card .kcal-value { font-size:2.5em; font-weight:bold; color:var(--accent); }
+.kcal-card .kcal-label { font-size:0.8em; color:var(--text-dim); text-transform:uppercase; }
+
+/* Meals table */
+.meals-section { margin-bottom:20px; }
+.meal-group {
+  background:var(--card); border-radius:12px; margin-bottom:12px;
+  border:1px solid var(--border); overflow:hidden;
+}
+.meal-header {
+  padding:10px 16px; font-weight:bold; font-size:0.9em;
+  text-transform:uppercase; letter-spacing:1px;
+  display:flex; justify-content:space-between; align-items:center;
+}
+.meal-header.col { background:#1e3a5f; }
+.meal-header.mer1 { background:#2d4a1e; }
+.meal-header.pranzo { background:#4a2d1e; }
+.meal-header.mer2 { background:#3a1e4a; }
+.meal-header.cena { background:#1e4a4a; }
+.meal-subtotal { font-size:0.8em; color:var(--accent); }
+
+.food-row {
+  display:grid; grid-template-columns: 1fr 80px 70px 70px 70px 70px 36px;
+  gap:6px; padding:6px 12px; align-items:center; border-top:1px solid var(--border);
+}
+.food-row .food-calcs { display:none; }
+.food-row:hover { background:rgba(255,255,255,0.03); }
+.food-row select, .food-row input {
+  padding:6px 8px; border-radius:6px; border:1px solid var(--border);
+  background:var(--card2); color:var(--text); font-size:0.85em;
+}
+.food-row select { cursor:pointer; }
+.food-row .calc { text-align:center; font-size:0.85em; color:var(--text-dim); }
+.food-row .remove-btn {
+  background:none; border:none; color:var(--red); cursor:pointer;
+  font-size:1.2em; opacity:0.6; transition:opacity .2s;
+}
+.food-row .remove-btn:hover { opacity:1; }
+
+.add-food-btn {
+  width:100%; padding:8px; background:var(--card2); border:1px dashed var(--border);
+  color:var(--text-dim); cursor:pointer; border-radius:0 0 12px 12px;
+  font-size:0.85em; transition:all .2s;
+}
+.add-food-btn:hover { background:var(--border); color:var(--text); }
+
+/* Legend */
+.legend {
+  display:flex; gap:12px; flex-wrap:wrap; justify-content:center;
+  margin-bottom:20px; font-size:0.75em;
+}
+.legend-item { display:flex; align-items:center; gap:4px; }
+.legend-dot { width:12px; height:12px; border-radius:3px; }
+
+/* Footer */
+.footer { text-align:center; color:var(--text-dim); font-size:0.75em; margin-top:30px; }
+
+/* Distribution bar */
+.dist-bar-container { margin-bottom:20px; }
+.dist-bar { display:flex; height:24px; border-radius:6px; overflow:hidden; background:var(--card); }
+.dist-segment { display:flex; align-items:center; justify-content:center; font-size:0.7em; font-weight:bold; color:#fff; transition:width .4s; }
+.dist-labels { display:flex; justify-content:center; gap:16px; margin-top:6px; font-size:0.75em; color:var(--text-dim); }
+
+@media (max-width: 700px) {
+  body { padding: 10px; }
+  h1 { font-size: 1.3em; margin-bottom: 14px; }
+  .food-row {
+    grid-template-columns: 1fr 30px;
+    gap: 6px;
+    padding: 10px 12px;
+  }
+  .food-row select {
+    grid-column: 1 / 2;
+    font-size: 1em;
+    padding: 10px;
+    min-height: 44px;
+  }
+  .food-row input {
+    grid-column: 1 / 2;
+    font-size: 1em;
+    padding: 10px;
+    min-height: 44px;
+    width: 100%;
+  }
+  .food-row .remove-btn {
+    grid-column: 2 / 3;
+    grid-row: 1 / 3;
+    align-self: center;
+    font-size: 1.5em;
+    min-height: 44px;
+    min-width: 30px;
+  }
+  .food-row .calc {
+    display: none;
+  }
+  .food-row .food-calcs {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: space-around;
+    background: var(--card2);
+    border-radius: 6px;
+    padding: 6px;
+    font-size: 0.8em;
+    color: var(--text-dim);
+  }
+  .config-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .config-item input { width: 100%; min-height: 44px; font-size: 1em; }
+  .dashboard { grid-template-columns: 1fr; }
+  .dash-card .macro-value { font-size: 1.6em; }
+  .tab-btn { padding: 12px 16px; font-size: 0.9em; }
+  .kcal-card .kcal-value { font-size: 2em; }
+  .add-food-btn { padding: 14px; font-size: 1em; min-height: 48px; }
+  .meal-header { padding: 12px 16px; }
+  .legend { font-size: 0.7em; gap: 8px; }
+  .dist-segment { font-size: 0.65em; }
+}
+</style>
+</head>
+<body>
+
+<h1>Macro Nutrient Tracker</h1>
+
+<div class="tabs">
+  <button class="tab-btn work active" onclick="switchTab('work')">Work Day</button>
+  <button class="tab-btn rest" onclick="switchTab('rest')">Rest Day</button>
+  <button class="tab-btn test" onclick="switchTab('test')">Test Day</button>
+</div>
+
+<div id="tab-work" class="tab-content active"></div>
+<div id="tab-rest" class="tab-content"></div>
+<div id="tab-test" class="tab-content"></div>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div> >= 100%</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--green-light)"></div> 90-99%</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--orange)"></div> 70-89%</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div> 50-69%</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--red-dark)"></div> < 50%</div>
+</div>
+
+<div class="footer">
+  Dati salvati automaticamente nel browser (localStorage). Apri questo file in qualsiasi browser per usarlo.
+</div>
+
+<script>
+// ===================== FOOD DATABASE =====================
+const FOODS_DB = [{"name":"Albume Carrefour","kcal":43,"carbo":0.9,"prot":9.8,"grassi":0},{"name":"Avena carrefour","kcal":372,"carbo":59,"prot":14,"grassi":7},{"name":"Avocado","kcal":174,"carbo":0.6,"prot":1.6,"grassi":17},{"name":"Banana","kcal":89,"carbo":23,"prot":1.2,"grassi":0.3},{"name":"Broccoli","kcal":14.2,"carbo":7,"prot":3,"grassi":0.4},{"name":"Burro","kcal":267.5,"carbo":0,"prot":0,"grassi":81},{"name":"Burro arachidi","kcal":664,"carbo":11,"prot":21,"grassi":58},{"name":"Carne Agnello","kcal":211,"carbo":0,"prot":19,"grassi":15},{"name":"Carne Bovino","kcal":106,"carbo":0,"prot":21,"grassi":2.3},{"name":"Carne Suino","kcal":141,"carbo":0,"prot":19,"grassi":6.8},{"name":"Carote","kcal":41,"carbo":10,"prot":0.9,"grassi":0.2},{"name":"Ceci","kcal":0,"carbo":0,"prot":0,"grassi":0},{"name":"Ciclodestrine","kcal":380,"carbo":96,"prot":0,"grassi":0},{"name":"Cioccolato fondente","kcal":614,"carbo":11,"prot":13,"grassi":54},{"name":"Cornflakes","kcal":377,"carbo":84,"prot":6.8,"grassi":0.8},{"name":"Couscous","kcal":349,"carbo":70,"prot":12,"grassi":1.5},{"name":"Crackers","kcal":432,"carbo":23,"prot":3,"grassi":11},{"name":"Fagioli","kcal":0,"carbo":0,"prot":0,"grassi":0},{"name":"Fagiolini","kcal":24,"carbo":2.4,"prot":1.6,"grassi":0.5},{"name":"Farina 0","kcal":399,"carbo":73,"prot":9,"grassi":0.8},{"name":"Farina di Riso","kcal":365,"carbo":81,"prot":8,"grassi":1},{"name":"Farina grano duro","kcal":345,"carbo":67,"prot":13,"grassi":1.9},{"name":"Farina rimacinata ","kcal":347,"carbo":69,"prot":13,"grassi":1.5},{"name":"Farro","kcal":248.2,"carbo":70,"prot":14,"grassi":3},{"name":"fesa di tacchino","kcal":107,"carbo":0,"prot":24,"grassi":1.2},{"name":"feta light","kcal":140,"carbo":0.7,"prot":19,"grassi":7},{"name":"Fette biscottate","kcal":389,"carbo":67,"prot":12,"grassi":6.8},{"name":"Fileia","kcal":361,"carbo":71.7,"prot":11.8,"grassi":1.5},{"name":"Fiocchi di latte bayern","kcal":83,"carbo":1,"prot":13,"grassi":3},{"name":"Formaggio","kcal":169.6,"carbo":1,"prot":25,"grassi":33},{"name":"Gallette di mais","kcal":386,"carbo":85,"prot":7.7,"grassi":1.5},{"name":"Gallette di riso","kcal":367,"carbo":80,"prot":8.3,"grassi":1.3},{"name":"Gnocchi di patate","kcal":155,"carbo":33,"prot":5.2,"grassi":0.5},{"name":"Gran Cereale","kcal":461,"carbo":60,"prot":8,"grassi":19},{"name":"Grana Simply","kcal":398,"carbo":0,"prot":33,"grassi":29},{"name":"Hamburger","kcal":186,"carbo":0.6,"prot":19,"grassi":12},{"name":"Insalata","kcal":15,"carbo":2.9,"prot":1.4,"grassi":0.2},{"name":"Ketchup","kcal":102,"carbo":23,"prot":1.2,"grassi":0},{"name":"Latte","kcal":47,"carbo":4.8,"prot":3.3,"grassi":1.6},{"name":"Latte di soia","kcal":25.4,"carbo":10,"prot":0,"grassi":0},{"name":"Latte proteico Cioccol.","kcal":88,"carbo":9.5,"prot":5,"grassi":3},{"name":"Latte proteico Soia","kcal":69,"carbo":4.7,"prot":5,"grassi":3.2},{"name":"Lattuga","kcal":5.9,"carbo":2,"prot":1,"grassi":0.1},{"name":"Lenticchie","kcal":75.8,"carbo":20,"prot":9,"grassi":0.4},{"name":"Lenticchie ","kcal":88,"carbo":13,"prot":6.6,"grassi":0},{"name":"Liquore","kcal":248.4,"carbo":0,"prot":0,"grassi":0},{"name":"Macinato Tacchino","kcal":114,"carbo":0,"prot":22,"grassi":15},{"name":"Mais","kcal":73,"carbo":1.4,"prot":2.7,"grassi":2.3},{"name":"mandorle","kcal":592,"carbo":2.4,"prot":25,"grassi":51},{"name":"Mango","kcal":35.1,"carbo":15,"prot":0.8,"grassi":0.4},{"name":"Manzo","kcal":490.2,"carbo":0,"prot":26,"grassi":20},{"name":"Marmellata","kcal":221,"carbo":53,"prot":0.5,"grassi":0.5},{"name":"Mela","kcal":34.2,"carbo":14,"prot":0.3,"grassi":0.2},{"name":"Melanzane","kcal":20,"carbo":6,"prot":1,"grassi":0.2},{"name":"Merluzzo Carbonaro","kcal":81,"carbo":0,"prot":18.5,"grassi":1},{"name":"Miele","kcal":314,"carbo":78,"prot":0,"grassi":0},{"name":"Mirtilli","kcal":48,"carbo":11,"prot":1.4,"grassi":0.4},{"name":"Mortadella","kcal":194.4,"carbo":0,"prot":2,"grassi":0},{"name":"Mozzarella simply","kcal":214,"carbo":0.6,"prot":17,"grassi":16},{"name":"Nocciole","kcal":248.2,"carbo":17,"prot":14,"grassi":60},{"name":"Noci","kcal":311.4,"carbo":14,"prot":15,"grassi":65},{"name":"Nutella","kcal":469,"carbo":56,"prot":5,"grassi":0},{"name":"Olio","kcal":900,"carbo":0,"prot":0,"grassi":100},{"name":"Pane Bauletto","kcal":282,"carbo":50,"prot":8.5,"grassi":4.6},{"name":"Pane Bianco Carrefour","kcal":251,"carbo":50,"prot":8.1,"grassi":1.7},{"name":"Pane segale","kcal":221,"carbo":40,"prot":6.7,"grassi":1.2},{"name":"Parmigiano","kcal":0,"carbo":0,"prot":0,"grassi":0},{"name":"Pasta integrale","kcal":0,"carbo":0,"prot":0,"grassi":0},{"name":"Pasta Simply","kcal":351,"carbo":73,"prot":12,"grassi":1.2},{"name":"Patate","kcal":77,"carbo":17,"prot":2,"grassi":0.1},{"name":"Patate dolci","kcal":86,"carbo":20,"prot":1.6,"grassi":0},{"name":"Pecorino ","kcal":395,"carbo":0,"prot":26.5,"grassi":32},{"name":"Pesce Spada","kcal":144,"carbo":0,"prot":19.66,"grassi":6},{"name":"Pesto verde","kcal":0,"carbo":0,"prot":0,"grassi":0},{"name":"Petto di pollo salumi","kcal":105,"carbo":3,"prot":19,"grassi":1.6},{"name":"Philadelphia","kcal":249,"carbo":2.9,"prot":3.7,"grassi":25},{"name":"Plasmon","kcal":413,"carbo":74,"prot":9.7,"grassi":8},{"name":"Piadina classica","kcal":307,"carbo":51,"prot":7.2,"grassi":7.8},{"name":"Pollo","kcal":100,"carbo":0,"prot":23.3,"grassi":0.8},{"name":"Popcorn","kcal":203.8,"carbo":74,"prot":6,"grassi":0},{"name":"Prosciutto cotto","kcal":102.8,"carbo":0,"prot":1,"grassi":0},{"name":"Prosciutto crudo","kcal":188,"carbo":1,"prot":3,"grassi":0},{"name":"Proteine","kcal":409,"carbo":8.8,"prot":74,"grassi":8.8},{"name":"Quinoa","kcal":221.7,"carbo":64,"prot":14,"grassi":6},{"name":"Ricotta Simply","kcal":96,"carbo":4,"prot":7.2,"grassi":5.5},{"name":"Riso","kcal":350,"carbo":76,"prot":7.2,"grassi":1.6},{"name":"Risotto ai funghi","kcal":176.8,"carbo":43,"prot":10,"grassi":0},{"name":"Salamella","kcal":225,"carbo":2.5,"prot":14,"grassi":17},{"name":"Salmone","kcal":208,"carbo":0,"prot":20,"grassi":13},{"name":"Salsiccia","kcal":228.1,"carbo":1,"prot":20,"grassi":0},{"name":"Sardine Carrefour","kcal":208,"carbo":0,"prot":22,"grassi":13},{"name":"Semi di chia","kcal":684.5,"carbo":42,"prot":16,"grassi":44},{"name":"Semi di girasole","kcal":545.8,"carbo":20,"prot":12,"grassi":51},{"name":"Semi di lino","kcal":187.4,"carbo":29,"prot":18,"grassi":42},{"name":"Sgombro","kcal":91.4,"carbo":8,"prot":2,"grassi":0},{"name":"Speck","kcal":189.9,"carbo":1,"prot":19,"grassi":0},{"name":"Spinaci","kcal":10.3,"carbo":4,"prot":3,"grassi":0.2},{"name":"Tacchino","kcal":132.4,"carbo":0,"prot":29,"grassi":2.7},{"name":"T\u00e8 nero","kcal":1.3,"carbo":0,"prot":0,"grassi":0},{"name":"T\u00e8 verde","kcal":1,"carbo":0,"prot":0,"grassi":0},{"name":"Tempeh","kcal":75.7,"carbo":0,"prot":0,"grassi":0},{"name":"Tiramis\u00f9","kcal":297.1,"carbo":55,"prot":6,"grassi":0},{"name":"Tofu","kcal":64.3,"carbo":0,"prot":0,"grassi":0},{"name":"Tonno naturale ","kcal":97,"carbo":0,"prot":22.5,"grassi":0.9},{"name":"Uova","kcal":131,"carbo":1,"prot":12,"grassi":8.7},{"name":"Uva","kcal":57,"carbo":18,"prot":0.7,"grassi":0.2},{"name":"Wasa","kcal":411,"carbo":63,"prot":12,"grassi":11},{"name":"Yogurt greco Carrefour","kcal":54,"carbo":3,"prot":10.3,"grassi":0},{"name":"Yogurt greco Lidl","kcal":50,"carbo":4,"prot":8.3,"grassi":0},{"name":"Yogurt greco Bianco","kcal":60,"carbo":4.8,"prot":10,"grassi":0},{"name":"Yogurt Intero bianco","kcal":0,"carbo":0,"prot":0,"grassi":0},{"name":"Yogurt Intero Mila","kcal":93,"carbo":12,"prot":3.4,"grassi":3.5},{"name":"zucca","kcal":26,"carbo":7,"prot":1,"grassi":0.1},{"name":"Zucchero","kcal":372.1,"carbo":99,"prot":0,"grassi":0},{"name":"Zucchine","kcal":15,"carbo":3,"prot":1.5,"grassi":0.1},{"name":"Vermicelli riso","kcal":134,"carbo":30,"prot":2.2,"grassi":0},{"name":"Udon ","kcal":150,"carbo":28,"prot":3.6,"grassi":2.7},{"name":"Piselli","kcal":72,"carbo":7.6,"prot":4.9,"grassi":1},{"name":"Polenta ","kcal":70,"carbo":14,"prot":1.7,"grassi":0.6}];
+
+// ===================== APP STATE =====================
+const MEALS = ['Colazione', 'Merenda 1', 'Pranzo', 'Merenda 2', 'Cena'];
+const DAY_TYPES = ['work', 'rest', 'test'];
+
+const DEFAULT_CONFIG = {
+  work: { peso: 86.5, prot: 1.7, grassi: 0.6, carbo: 3.0, targetKcal: 2100 },
+  rest: { peso: 86.5, prot: 1.7, grassi: 0.7, carbo: 2.0, targetKcal: 1800 },
+  test: { peso: 86.5, prot: 2.0, grassi: 0.8, carbo: 2.5, targetKcal: 2000 }
+};
+
+let state = loadState();
+
+function loadState() {
+  try {
+    const saved = localStorage.getItem('macroTracker_v2');
+    if (saved) return JSON.parse(saved);
+  } catch(e) {}
+  return getDefaultState();
+}
+
+function getDefaultState() {
+  const s = {};
+  DAY_TYPES.forEach(day => {
+    s[day] = {
+      config: {...DEFAULT_CONFIG[day]},
+      meals: {}
+    };
+    MEALS.forEach(meal => {
+      s[day].meals[meal] = [{ food: '', grams: '' }];
+    });
+  });
+  return s;
+}
+
+function saveState() {
+  try {
+    localStorage.setItem('macroTracker_v2', JSON.stringify(state));
+  } catch(e) {}
+}
+
+// ===================== RENDERING =====================
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.querySelector(`.tab-btn.${tab}`).classList.add('active');
+  document.getElementById(`tab-${tab}`).classList.add('active');
+}
+
+function renderAll() {
+  DAY_TYPES.forEach(day => renderDay(day));
+}
+
+function renderDay(day) {
+  const container = document.getElementById(`tab-${day}`);
+  const cfg = state[day].config;
+  const meals = state[day].meals;
+
+  // Calculate totals
+  let totKcal=0, totCarbo=0, totProt=0, totGrassi=0;
+  MEALS.forEach(meal => {
+    meals[meal].forEach(item => {
+      if (item.food && item.grams) {
+        const f = FOODS_DB.find(x => x.name === item.food);
+        if (f) {
+          const g = parseFloat(item.grams) || 0;
+          totKcal += g/100 * f.kcal;
+          totCarbo += g/100 * f.carbo;
+          totProt += g/100 * f.prot;
+          totGrassi += g/100 * f.grassi;
+        }
+      }
+    });
+  });
+
+  const minProt = cfg.peso * cfg.prot;
+  const minGrassi = cfg.peso * cfg.grassi;
+  const minCarbo = cfg.peso * cfg.carbo;
+
+  const pctProt = minProt > 0 ? totProt / minProt : 0;
+  const pctGrassi = minGrassi > 0 ? totGrassi / minGrassi : 0;
+  const pctCarbo = minCarbo > 0 ? totCarbo / minCarbo : 0;
+
+  function getStatus(pct) {
+    if (pct >= 1) return 'green';
+    if (pct >= 0.9) return 'green-light';
+    if (pct >= 0.7) return 'orange';
+    if (pct >= 0.5) return 'red';
+    return 'red-dark';
+  }
+
+  function getColor(status) {
+    const map = { green:'var(--green)', 'green-light':'var(--green-light)', orange:'var(--orange)', red:'var(--red)', 'red-dark':'var(--red-dark)' };
+    return map[status];
+  }
+
+  // Distribution
+  const totMacroKcal = totCarbo*4 + totProt*4 + totGrassi*9;
+  const distCarbo = totMacroKcal > 0 ? (totCarbo*4/totMacroKcal*100) : 0;
+  const distProt = totMacroKcal > 0 ? (totProt*4/totMacroKcal*100) : 0;
+  const distGrassi = totMacroKcal > 0 ? (totGrassi*9/totMacroKcal*100) : 0;
+
+  let html = '';
+
+  // Config
+  const targetKcal = cfg.targetKcal || 2000;
+  html += `<div class="config-grid">
+    <div class="config-item"><label>Peso (kg)</label><input type="number" step="0.1" value="${cfg.peso}" onchange="updateConfig('${day}','peso',this.value)"></div>
+    <div class="config-item"><label>Proteine (g/kg)</label><input type="number" step="0.1" value="${cfg.prot}" onchange="updateConfig('${day}','prot',this.value)"></div>
+    <div class="config-item"><label>Grassi (g/kg)</label><input type="number" step="0.1" value="${cfg.grassi}" onchange="updateConfig('${day}','grassi',this.value)"></div>
+    <div class="config-item"><label>Carboidrati (g/kg)</label><input type="number" step="0.1" value="${cfg.carbo}" onchange="updateConfig('${day}','carbo',this.value)"></div>
+    <div class="config-item"><label>Target Kcal</label><input type="number" step="50" value="${targetKcal}" onchange="updateConfig('${day}','targetKcal',this.value)"></div>
+    <div class="config-item"><label>Min Prot (g)</label><div class="computed">${minProt.toFixed(0)}</div></div>
+    <div class="config-item"><label>Min Grassi (g)</label><div class="computed">${minGrassi.toFixed(0)}</div></div>
+    <div class="config-item"><label>Min Carbo (g)</label><div class="computed">${minCarbo.toFixed(0)}</div></div>
+  </div>`;
+
+  // Kcal with target comparison
+  const kcalDiff = totKcal - targetKcal;
+  const kcalPct = targetKcal > 0 ? totKcal / targetKcal : 0;
+  let kcalStatus = '', kcalColor = '';
+  if (totKcal === 0) { kcalStatus = ''; kcalColor = 'var(--text-dim)'; }
+  else if (kcalPct >= 0.95 && kcalPct <= 1.05) { kcalStatus = 'IN TARGET'; kcalColor = 'var(--green)'; }
+  else if (kcalPct < 0.95) { kcalStatus = `${kcalDiff.toFixed(0)} kcal sotto`; kcalColor = 'var(--orange)'; }
+  else { kcalStatus = `+${kcalDiff.toFixed(0)} kcal sopra`; kcalColor = 'var(--red)'; }
+  const kcalBarWidth = Math.min(kcalPct * 100, 120);
+  html += `<div class="kcal-card" style="border-color:${totKcal > 0 ? kcalColor : 'var(--accent)'}">
+    <div class="kcal-label">Kcal Totali / Target: ${targetKcal}</div>
+    <div class="kcal-value">${totKcal.toFixed(0)} <span style="font-size:0.5em;color:${kcalColor}">${kcalStatus}</span></div>
+    <div class="macro-bar" style="margin-top:10px"><div class="macro-bar-fill" style="width:${Math.min(kcalBarWidth,100)}%;background:${kcalColor}"></div></div>
+    <div style="font-size:0.75em;color:var(--text-dim);margin-top:4px">${(kcalPct*100).toFixed(0)}% del target</div>
+  </div>`;
+
+  // Dashboard
+  const macros = [
+    { name:'Proteine', total:totProt, min:minProt, pct:pctProt, gkg: cfg.peso>0 ? totProt/cfg.peso : 0 },
+    { name:'Grassi', total:totGrassi, min:minGrassi, pct:pctGrassi, gkg: cfg.peso>0 ? totGrassi/cfg.peso : 0 },
+    { name:'Carboidrati', total:totCarbo, min:minCarbo, pct:pctCarbo, gkg: cfg.peso>0 ? totCarbo/cfg.peso : 0 },
+  ];
+
+  html += `<div class="dashboard">`;
+  macros.forEach(m => {
+    const status = getStatus(m.pct);
+    const color = getColor(status);
+    const barWidth = Math.min(m.pct * 100, 100);
+    html += `<div class="dash-card status-${status}">
+      <div class="macro-name">${m.name}</div>
+      <div class="macro-value" style="color:${color}">${m.total.toFixed(1)}g</div>
+      <div class="macro-target">obiettivo: ${m.min.toFixed(0)}g &middot; ${(m.pct*100).toFixed(0)}%</div>
+      <div class="macro-gkg">${m.gkg.toFixed(2)} g/kg</div>
+      <div class="macro-bar"><div class="macro-bar-fill" style="width:${barWidth}%;background:${color}"></div></div>
+    </div>`;
+  });
+  html += `</div>`;
+
+  // Distribution bar
+  if (totMacroKcal > 0) {
+    html += `<div class="dist-bar-container">
+      <div class="dist-bar">
+        <div class="dist-segment" style="width:${distCarbo}%;background:#3498db">C ${distCarbo.toFixed(0)}%</div>
+        <div class="dist-segment" style="width:${distProt}%;background:#e74c3c">P ${distProt.toFixed(0)}%</div>
+        <div class="dist-segment" style="width:${distGrassi}%;background:#f39c12">G ${distGrassi.toFixed(0)}%</div>
+      </div>
+      <div class="dist-labels"><span>Carbo: ${distCarbo.toFixed(0)}%</span><span>Prot: ${distProt.toFixed(0)}%</span><span>Grassi: ${distGrassi.toFixed(0)}%</span></div>
+    </div>`;
+  }
+
+  // Meals
+  html += `<div class="meals-section">`;
+  const mealClasses = ['col','mer1','pranzo','mer2','cena'];
+  MEALS.forEach((meal, mi) => {
+    // Calculate meal subtotals
+    let mKcal=0, mC=0, mP=0, mG=0;
+    meals[meal].forEach(item => {
+      if (item.food && item.grams) {
+        const f = FOODS_DB.find(x => x.name === item.food);
+        if (f) {
+          const g = parseFloat(item.grams)||0;
+          mKcal += g/100*f.kcal; mC += g/100*f.carbo; mP += g/100*f.prot; mG += g/100*f.grassi;
+        }
+      }
+    });
+
+    html += `<div class="meal-group">
+      <div class="meal-header ${mealClasses[mi]}">
+        <span>${meal}</span>
+        <span class="meal-subtotal">${mKcal.toFixed(0)} kcal | C:${mC.toFixed(0)} P:${mP.toFixed(0)} G:${mG.toFixed(0)}</span>
+      </div>`;
+
+    meals[meal].forEach((item, idx) => {
+      const f = item.food ? FOODS_DB.find(x => x.name === item.food) : null;
+      const g = parseFloat(item.grams) || 0;
+      const kcal = f ? (g/100*f.kcal).toFixed(0) : '-';
+      const carbo = f ? (g/100*f.carbo).toFixed(1) : '-';
+      const prot = f ? (g/100*f.prot).toFixed(1) : '-';
+      const grassi = f ? (g/100*f.grassi).toFixed(1) : '-';
+
+      html += `<div class="food-row">
+        <select onchange="updateFood('${day}','${meal}',${idx},this.value)">
+          <option value="">-- scegli --</option>
+          ${FOODS_DB.map(fd => `<option value="${fd.name}" ${fd.name===item.food?'selected':''}>${fd.name}</option>`).join('')}
+        </select>
+        <input type="number" placeholder="grammi" value="${item.grams}" onchange="updateGrams('${day}','${meal}',${idx},this.value)">
+        <div class="calc">${kcal}</div>
+        <div class="calc">${carbo}</div>
+        <div class="calc">${prot}</div>
+        <div class="calc">${grassi}</div>
+        <button class="remove-btn" onclick="removeFood('${day}','${meal}',${idx})">&times;</button>
+        <div class="food-calcs">${f ? `${kcal} kcal &middot; C:${carbo} &middot; P:${prot} &middot; G:${grassi}` : ''}</div>
+      </div>`;
+    });
+
+    html += `<button class="add-food-btn" onclick="addFood('${day}','${meal}')">+ Aggiungi alimento</button>`;
+    html += `</div>`;
+  });
+  html += `</div>`;
+
+  container.innerHTML = html;
+}
+
+// ===================== ACTIONS =====================
+function updateConfig(day, key, value) {
+  state[day].config[key] = parseFloat(value) || 0;
+  saveState();
+  renderDay(day);
+}
+
+function updateFood(day, meal, idx, value) {
+  state[day].meals[meal][idx].food = value;
+  saveState();
+  renderDay(day);
+}
+
+function updateGrams(day, meal, idx, value) {
+  state[day].meals[meal][idx].grams = value;
+  saveState();
+  renderDay(day);
+}
+
+function addFood(day, meal) {
+  state[day].meals[meal].push({ food:'', grams:'' });
+  saveState();
+  renderDay(day);
+}
+
+function removeFood(day, meal, idx) {
+  state[day].meals[meal].splice(idx, 1);
+  if (state[day].meals[meal].length === 0) {
+    state[day].meals[meal].push({ food:'', grams:'' });
+  }
+  saveState();
+  renderDay(day);
+}
+
+// Initial render
+renderAll();
+
+// Register Service Worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js')
+    .then(() => console.log('SW registered'))
+    .catch(e => console.log('SW failed', e));
+}
+</script>
+</body>
+</html>
